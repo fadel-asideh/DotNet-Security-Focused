@@ -1,0 +1,7 @@
+@DotNetSecurityFocused_HostAddress = http://localhost:5029
+
+### Health Check
+GET {{DotNetSecurityFocused_HostAddress}}/health
+Accept: text/plain
+
+###
