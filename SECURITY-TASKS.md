@@ -31,7 +31,7 @@ Add authentication and role-based authorization to the API using JWT bearer toke
 
 ## Task 2: Prevent SQL Injection in EF Core
 
-**Status:** Planned
+**Status:** Done
 
 ### 🎯 Objective
 Harden the data access layer against injection attacks by standardizing on parameterized queries.
@@ -39,16 +39,37 @@ Harden the data access layer against injection attacks by standardizing on param
 ### 🛡 Security Focus
 Neutralize input-based injection vectors by strictly using parameterized queries instead of string concatenation in raw SQL.
 
-### 🛠 Implementation Plan
-- Add a `Product` entity/table dedicated to this exercise
+### 🛠 Implementation
+- `Product` entity/table dedicated to this exercise, seeded with sample rows plus one sensitive-looking row ("Admin Override Key") that a legitimate search should never surface
 - `Services/ProductSearchService.cs`:
-  - `SearchByNameVulnerable` — deliberately unsafe `FromSqlRaw` with string interpolation, kept as a documented reference example, never wired to a controller route
-  - `SearchByNameSafe` — safe LINQ equivalent (and a `FromSqlInterpolated` variant for cases where raw SQL is unavoidable)
-- `Controllers/ProductsController.cs` — exposes only the safe search endpoint
+  - `SearchByNameVulnerableAsync` — deliberately unsafe `FromSqlRaw` with string interpolation, kept as a documented reference example, never wired to a controller route
+  - `SearchByNameSafeAsync` — safe LINQ equivalent
+  - `SearchByNameSafeRawAsync` — safe `FromSqlInterpolated` variant for cases where raw SQL is unavoidable
+- `Controllers/ProductsController.cs` — `GET /products/search?name=...`, wired only to the safe method
 - `DotNetSecurityFocused.Tests/Tests/SqlInjectionTests.cs`:
-  - Proves the vulnerable method returns all rows for a payload like `' OR '1'='1`
-  - Proves the safe method/endpoint treats the same payload as literal text (no match)
+  - Proves the vulnerable method returns all rows (including "Admin Override Key") for the payload `x' OR '1'='1' -- ` — the trailing SQL comment neutralizes the query template's own closing `%'`, which a plain `' OR '1'='1` payload doesn't survive
+  - Proves the safe method and the live HTTP endpoint both treat the same payload as literal text (no match)
   - Confirms a legitimate search term still works
 
+### 📖 Outcome
+All data access paths use parameterized queries. Injection payloads are handled as literal input and cannot alter query logic — verified by 4 new tests (25 total passing across the project).
+
+---
+
+## Task 3: Implement Input Validation & Sanitization
+
+**Status:** Planned
+
+### 🎯 Objective
+Add rigorous validation to all incoming API requests before they reach business logic.
+
+### 🛡 Security Focus
+Prevent malformed data and malicious payloads from propagating beyond the API boundary.
+
+### 🛠 Implementation Plan
+- Apply Data Annotations (`[Required]`, `[StringLength]`, `[Range]`, etc.) to request DTOs
+- Implement FluentValidation for complex, cross-field, or conditional validation scenarios
+- Add an integration test that submits invalid data and asserts a 400 Bad Request response
+
 ### 📖 Expected Outcome
-All data access paths use parameterized queries. Injection payloads are handled as literal input and cannot alter query logic.
+Invalid or malformed requests are rejected at the controller boundary with 400 Bad Request and a clear validation error response, never reaching the service layer.
