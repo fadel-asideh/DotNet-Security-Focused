@@ -5,6 +5,7 @@ using DotNetSecurityFocused.Data;
 using DotNetSecurityFocused.Models;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using DotNetSecurityFocused.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,9 @@ builder.Services.AddAuthentication(options=>
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!))
     };
 });
+
+// Add Product service
+builder.Services.AddScoped<ProductSearchService>();
 
 var app = builder.Build();
 
