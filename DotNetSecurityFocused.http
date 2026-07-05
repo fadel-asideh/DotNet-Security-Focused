@@ -1,7 +1,247 @@
-@DotNetSecurityFocused_HostAddress = http://localhost:5029
+@baseUrl = http://localhost:5029
 
-### Health Check
-GET {{DotNetSecurityFocused_HostAddress}}/health
-Accept: text/plain
+# ===========================
+# AUTH - Register
+# ===========================
+
+### Register an Admin user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+    "email": "admin@test.com",
+    "password": "Admin@123!",
+    "roles": ["Admin"]
+}
 
 ###
+
+### Register a Manager user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+    "email": "manager@test.com",
+    "password": "Manager@123!",
+    "roles": ["Manager"]
+}
+
+###
+
+### Register a regular User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+    "email": "user@test.com",
+    "password": "User@123!",
+    "roles": ["User"]
+}
+
+###
+
+### Register a user with multiple roles (Admin + Manager)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+    "email": "adminmanager@test.com",
+    "password": "AdminManager@123!",
+    "roles": ["Admin", "Manager"]
+}
+
+###
+
+### Register with invalid role → expect 400
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+    "email": "test@test.com",
+    "password": "Test@123!",
+    "roles": ["SuperAdmin"]
+}
+
+###
+
+# ===========================
+# AUTH - Login
+# ===========================
+
+### Login as Admin (copy token → paste into @adminToken below)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "admin@test.com",
+    "password": "Admin@123!"
+}
+
+###
+
+### Login as Manager (copy token → paste into @managerToken below)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "manager@test.com",
+    "password": "Manager@123!"
+}
+
+###
+
+### Login as User (copy token → paste into @userToken below)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "user@test.com",
+    "password": "User@123!"
+}
+
+###
+
+### Login as Admin+Manager (copy token → paste into @adminManagerToken below)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "adminmanager@test.com",
+    "password": "AdminManager@123!"
+}
+
+###
+
+### Login with wrong password → expect 401
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "admin@test.com",
+    "password": "WrongPassword!"
+}
+
+###
+
+# ===========================
+# Paste tokens here after login
+# ===========================
+
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWUyN2M3Yy02NTU1LTQyODQtOGJkYy02M2Y0YTY4N2I4MDciLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwianRpIjoiMGE3ZjU2M2ItNTcwMC00ZGUxLTkwYWUtMGI3MWZlMTYwMDZmIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiQWRtaW4iLCJleHAiOjE3ODMyMzU1OTIsImlzcyI6IkRvdE5ldFNlY3VyaXR5Rm9jdXNlZCIsImF1ZCI6IkRvdG5ldFNlY3VyaXR5Rm9jdXNlZFVzZXJzIn0.uqKYHuL2hcEyNxVaeBYtHF0VefcwD4uP2qpMPMCptJg
+@managerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmY2IzNGY3Ny1mNmZlLTQ5NDYtOTFmMC00YTdiODg3YjQzMTUiLCJlbWFpbCI6Im1hbmFnZXJAdGVzdC5jb20iLCJqdGkiOiJlNGY5YjJiOS1mNTVjLTRmMmItYjZiOS1hNjVkMzBkNmEzOTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJNYW5hZ2VyIiwiZXhwIjoxNzgzMjM1NzE3LCJpc3MiOiJEb3ROZXRTZWN1cml0eUZvY3VzZWQiLCJhdWQiOiJEb3RuZXRTZWN1cml0eUZvY3VzZWRVc2VycyJ9.acRa1qo5vdGBaU9jN3Vq362d2uRpTmUrj-5kmsIE0KY
+@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNzUyZTBlMi0xMDM0LTQ2NDctOTYxYi0wYjk3Nzg3NGRlOWYiLCJlbWFpbCI6InVzZXJAdGVzdC5jb20iLCJqdGkiOiJkMDJjZTY5Zi1lZDNkLTQ2MzUtOGQ0NS04YzJhNDc3YWFjMWUiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJVc2VyIiwiZXhwIjoxNzgzMjM1Njk1LCJpc3MiOiJEb3ROZXRTZWN1cml0eUZvY3VzZWQiLCJhdWQiOiJEb3RuZXRTZWN1cml0eUZvY3VzZWRVc2VycyJ9.VoLXS6h3QGNvhSCV2iNlQosgZzzt-c4nWaZtxcsE6ig
+@adminManagerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZjA4MjM0ZC02YzljLTRiYjYtOGM3ZS02NmJiNzgyZWE4YTIiLCJlbWFpbCI6ImFkbWlubWFuYWdlckB0ZXN0LmNvbSIsImp0aSI6IjU1YzMzNzJmLWZhZDAtNGM5NC1hN2EwLWZhOGUyMDIwYjQ4NSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6WyJNYW5hZ2VyIiwiQWRtaW4iXSwiZXhwIjoxNzgzMjM1NjU0LCJpc3MiOiJEb3ROZXRTZWN1cml0eUZvY3VzZWQiLCJhdWQiOiJEb3RuZXRTZWN1cml0eUZvY3VzZWRVc2VycyJ9.wXRcynl3G_W0xWSvgdx2xQrCv8z-joHneMIdzuigGPQ
+
+# ===========================
+# SECRETS - No token (expect 401)
+# ===========================
+
+### No token → expect 401
+GET {{baseUrl}}/secrets/admin
+
+###
+
+# ===========================
+# SECRETS - Admin endpoint
+# ===========================
+
+### Admin hits admin endpoint → expect 200
+GET {{baseUrl}}/secrets/admin
+Authorization: Bearer {{adminToken}}
+
+###
+
+### User hits admin endpoint → expect 403
+GET {{baseUrl}}/secrets/admin
+Authorization: Bearer {{userToken}}
+
+###
+
+### Manager hits admin endpoint → expect 403
+GET {{baseUrl}}/secrets/admin
+Authorization: Bearer {{managerToken}}
+
+###
+
+# ===========================
+# SECRETS - User endpoint
+# ===========================
+
+### User hits user endpoint → expect 200
+GET {{baseUrl}}/secrets/user
+Authorization: Bearer {{userToken}}
+
+###
+
+### Admin hits user endpoint → expect 403
+GET {{baseUrl}}/secrets/user
+Authorization: Bearer {{adminToken}}
+
+###
+
+# ===========================
+# SECRETS - Manager endpoint
+# ===========================
+
+### Manager hits manager endpoint → expect 200
+GET {{baseUrl}}/secrets/manager
+Authorization: Bearer {{managerToken}}
+
+###
+
+### User hits manager endpoint → expect 403
+GET {{baseUrl}}/secrets/manager
+Authorization: Bearer {{userToken}}
+
+###
+
+# ===========================
+# SECRETS - Admin OR Manager endpoint
+# ===========================
+
+### Admin hits admin-or-manager → expect 200
+GET {{baseUrl}}/secrets/admin-or-manager
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Manager hits admin-or-manager → expect 200
+GET {{baseUrl}}/secrets/admin-or-manager
+Authorization: Bearer {{managerToken}}
+
+###
+
+### User hits admin-or-manager → expect 403
+GET {{baseUrl}}/secrets/admin-or-manager
+Authorization: Bearer {{userToken}}
+
+###
+
+# ===========================
+# SECRETS - Admin AND Manager endpoint
+# ===========================
+
+### Admin+Manager user hits admin-and-manager → expect 200
+GET {{baseUrl}}/secrets/admin-and-manager
+Authorization: Bearer {{adminManagerToken}}
+
+###
+
+### Admin only hits admin-and-manager → expect 403
+GET {{baseUrl}}/secrets/admin-and-manager
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Manager only hits admin-and-manager → expect 403
+GET {{baseUrl}}/secrets/admin-and-manager
+Authorization: Bearer {{managerToken}}
+
+###
+
+# ===========================
+# Health Check
+# ===========================
+
+### Health check → expect 200 Healthy
+GET {{baseUrl}}/health
