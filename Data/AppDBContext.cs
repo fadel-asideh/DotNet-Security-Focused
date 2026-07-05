@@ -5,7 +5,9 @@ using DotNetSecurityFocused.Models;
 namespace DotNetSecurityFocused.Data;
 public class AppDBContext : IdentityDbContext<ApplicationUser>
 {
+    public DbSet<Product> Products => Set<Product>();
     public AppDBContext(DbContextOptions<AppDBContext> options) : base(options)
     {
+        
     }
 }
