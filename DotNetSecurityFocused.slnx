@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="DotNetSecurityFocused.csproj" />
+  <Project Path="DotNetSecurityFocused.Tests/DotNetSecurityFocused.Tests.csproj" />
+</Solution>
