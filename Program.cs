@@ -5,6 +5,7 @@ using DotNetSecurityFocused.Data;
 using DotNetSecurityFocused.Models;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using DotNetSecurityFocused.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,11 +47,14 @@ builder.Services.AddAuthentication(options=>
     };
 });
 
+// Add Product service
+builder.Services.AddScoped<ProductSearchService>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    await DBSeeder.SeedRolesAsync(scope.ServiceProvider);
+    await DBSeeder.SeedDataAsync(scope.ServiceProvider);
 }
 
 // Configure the HTTP request pipeline.
