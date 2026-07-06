@@ -58,7 +58,7 @@ All data access paths use parameterized queries. Injection payloads are handled 
 
 ## Task 3: Implement Input Validation & Sanitization
 
-**Status:** Planned
+**Status:** Done
 
 ### 🎯 Objective
 Add rigorous validation to all incoming API requests before they reach business logic.
@@ -66,10 +66,32 @@ Add rigorous validation to all incoming API requests before they reach business 
 ### 🛡 Security Focus
 Prevent malformed data and malicious payloads from propagating beyond the API boundary.
 
+### 🛠 Implementation
+- `Models/AuthModels.cs` — Data Annotations on `RegisterRequest`/`LoginRequest` (`[Required]`, `[EmailAddress]`, `[MinLength]`/`[MaxLength]`), auto-enforced pre-action by `[ApiController]`'s built-in model-state validation
+- `RegisterRequest.ConfirmPassword` added specifically to exercise a cross-field rule
+- `Validators/RegisterRequestValidator.cs` — FluentValidation rules for `ConfirmPassword == Password` and a non-empty `Roles` array
+- `Controllers/AuthController.cs` — `_registerValidator.ValidateAsync(request)` called explicitly at the top of `Register`, before the existing role-existence checks (manual invocation, not a global filter)
+- `DotNetSecurityFocused.Tests/Tests/ValidationTests.cs` — 5 new tests covering missing email, too-short password, mismatched confirm password, empty roles array, and a valid-request regression check
+
+### 📖 Outcome
+Invalid or malformed registration requests are rejected with 400 Bad Request before reaching role-assignment/user-creation logic. Data Annotation failures are caught automatically by the framework; FluentValidation catches the cross-field/collection rules that annotations can't express — verified by 5 new tests (30 total passing across the project).
+
+---
+
+## Task 4: Secure Secrets Management
+
+**Status:** Planned
+
+### 🎯 Objective
+Decouple sensitive credentials from the source code and version control.
+
+### 🛡 Security Focus
+Prevent accidental credential exposure in public repositories and commit history.
+
 ### 🛠 Implementation Plan
-- Apply Data Annotations (`[Required]`, `[StringLength]`, `[Range]`, etc.) to request DTOs
-- Implement FluentValidation for complex, cross-field, or conditional validation scenarios
-- Add an integration test that submits invalid data and asserts a 400 Bad Request response
+- Configure the .NET Secret Manager (`dotnet user-secrets`) for local development
+- Verify that `appsettings.json` contains no production keys, connection strings, or secrets
+- Add `appsettings.Development.json` and confirm it is listed in `.gitignore`
 
 ### 📖 Expected Outcome
-Invalid or malformed requests are rejected at the controller boundary with 400 Bad Request and a clear validation error response, never reaching the service layer.
+No secrets are committed to the repository. Local development reads credentials from the Secret Manager, and production reads them from the environment or a secrets vault.
