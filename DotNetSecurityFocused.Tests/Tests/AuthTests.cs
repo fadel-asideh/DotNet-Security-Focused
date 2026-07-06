@@ -27,6 +27,7 @@ public class AuthTests : IClassFixture<ApiFactory>
         {
             email = "register_valid@test.com",
             password = "Test@123!",
+            confirmPassword = "Test@123!",
             roles = new[] { "Admin" }
         });
 
@@ -40,6 +41,7 @@ public class AuthTests : IClassFixture<ApiFactory>
         {
             email = "register_invalid_role@test.com",
             password = "Test@123!",
+            ConfirmPassword = "Test@123!",
             roles = new[] { "SuperAdmin" }
         });
 
@@ -53,6 +55,7 @@ public class AuthTests : IClassFixture<ApiFactory>
         {
             email = "duplicate@test.com",
             password = "Test@123!",
+            ConfirmPassword = "Test@123!",
             roles = new[] { "User" }
         };
 
@@ -73,6 +76,7 @@ public class AuthTests : IClassFixture<ApiFactory>
         {
             email = "login_valid@test.com",
             password = "Test@123!",
+            confirmPassword = "Test@123!",
             roles = new[] { "User" }
         });
 
@@ -95,6 +99,7 @@ public class AuthTests : IClassFixture<ApiFactory>
         {
             email = "login_wrong@test.com",
             password = "Test@123!",
+            confirmPassword = "Test@123!",
             roles = new[] { "User" }
         });
 
