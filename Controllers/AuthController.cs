@@ -6,6 +6,7 @@ using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using DotNetSecurityFocused.Data;
+using FluentValidation;
 
 namespace DotNetSecurityFocused.Controllers;
 
@@ -16,15 +17,17 @@ public class AuthController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly IValidator<RegisterRequest> _registerValidator;
     private readonly AppDBContext _appDbContext;
     private readonly ILogger<AuthController> _logger;
     private readonly IConfiguration _configuration;
 
-    public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager,SignInManager<ApplicationUser> signInManager, AppDBContext appDBContext, ILogger<AuthController> logger, IConfiguration configuration)
+    public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, SignInManager<ApplicationUser> signInManager, IValidator<RegisterRequest> registerValidator, AppDBContext appDBContext, ILogger<AuthController> logger, IConfiguration configuration)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _signInManager = signInManager;
+        _registerValidator = registerValidator;
         _appDbContext = appDBContext;
         _logger = logger;
         _configuration = configuration;
@@ -33,6 +36,13 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
+        // Validations
+        var validationResult = await _registerValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(validationResult.Errors.Select(e => new { e.PropertyName, e.ErrorMessage }));
+        }
+
         // validate roles exist
         foreach (var role in request.Roles)
         {
