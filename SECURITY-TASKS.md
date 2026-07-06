@@ -80,7 +80,7 @@ Invalid or malformed registration requests are rejected with 400 Bad Request bef
 
 ## Task 4: Secure Secrets Management
 
-**Status:** Planned
+**Status:** Done
 
 ### 🎯 Objective
 Decouple sensitive credentials from the source code and version control.
@@ -88,10 +88,17 @@ Decouple sensitive credentials from the source code and version control.
 ### 🛡 Security Focus
 Prevent accidental credential exposure in public repositories and commit history.
 
-### 🛠 Implementation Plan
-- Configure the .NET Secret Manager (`dotnet user-secrets`) for local development
-- Verify that `appsettings.json` contains no production keys, connection strings, or secrets
-- Add `appsettings.Development.json` and confirm it is listed in `.gitignore`
+### 🛠 Implementation
+- `.NET Secret Manager` (`dotnet user-secrets`) already configured for local development since Task 1 — `Jwt:SecretKey`, `Jwt:Issuer`, `Jwt:Audience` live outside the repo in `%APPDATA%\Microsoft\UserSecrets\<UserSecretsId>\secrets.json`
+- `appsettings.json` verified clean — only `Logging`/`AllowedHosts`, no keys or connection strings
+- `appsettings.Development.json` added to `.gitignore` and untracked (`git rm --cached`) — it holds no secrets today, but can no longer be accidentally committed with any in the future
+- `appsettings.Development.json.template` committed (mirrors the existing `secrets.template.json` pattern) so a fresh clone knows the file is expected
 
-### 📖 Expected Outcome
-No secrets are committed to the repository. Local development reads credentials from the Secret Manager, and production reads them from the environment or a secrets vault.
+New clone setup: copy `appsettings.Development.json.template` → `appsettings.Development.json` (gitignored) for local logging overrides; use `dotnet user-secrets set` for actual credentials.
+
+### Secrets by environment
+- **Development**: `dotnet user-secrets set "Jwt:SecretKey" "..."` (see `secrets.template.json` for the required keys). ASP.NET Core only wires up the User Secrets configuration provider when `ASPNETCORE_ENVIRONMENT=Development`.
+- **Any other environment**: set `Jwt__SecretKey`, `Jwt__Issuer`, `Jwt__Audience` as environment variables (double underscore `__` represents the `:` nesting separator, since most shells disallow `:` in variable names), or source them from a secrets vault (Azure Key Vault, AWS Secrets Manager, etc.) that populates environment variables at deploy time. Production never reads from `secrets.json`, even if one happened to exist on the machine.
+
+### 📖 Outcome
+No secrets are committed to the repository. Local development reads credentials from the Secret Manager, and production reads them from the environment or a secrets vault — verified end-to-end by running the app with `ASPNETCORE_ENVIRONMENT=Production` and `Jwt__SecretKey`/`Jwt__Issuer`/`Jwt__Audience` set as environment variables only (no `secrets.json` involved): register/login succeeded and issued a correctly-signed JWT. `dotnet test` remains green at 30/30.
