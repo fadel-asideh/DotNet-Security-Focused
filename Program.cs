@@ -1,58 +1,21 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
 using DotNetSecurityFocused.Data;
 using DotNetSecurityFocused.Models;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using DotNetSecurityFocused.Services;
 using FluentValidation;
 using DotNetSecurityFocused.Validators;
+using DotNetSecurityFocused.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
-// Add Helthchecks
 builder.Services.AddHealthChecks();
-
-// Add DBContext
-builder.Services.AddDbContext<AppDBContext>(options =>
-    options.UseSqlite("Data Source=app.db"));
-
-// Add Identity
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<AppDBContext>();
-
-// Add JWT Authentication
-builder.Services.AddAuthentication(options=>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options=>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!))
-    };
-});
-
-// Add Validators
+builder.Services.AddDbContext<AppDBContext>(options => options.UseSqlite("Data Source=app.db"));
+builder.Services.AddAppAuthentication(builder.Configuration);
+builder.Services.AddAppRateLimiting();
 builder.Services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
-
-// Add Product service
 builder.Services.AddScoped<ProductSearchService>();
 
 var app = builder.Build();
@@ -71,6 +34,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 app.MapHealthChecks("/health");
 

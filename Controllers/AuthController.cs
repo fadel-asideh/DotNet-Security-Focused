@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using DotNetSecurityFocused.Data;
 using FluentValidation;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DotNetSecurityFocused.Controllers;
 
@@ -79,6 +80,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("ip-sliding")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);

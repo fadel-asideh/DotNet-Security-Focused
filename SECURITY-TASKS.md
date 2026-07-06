@@ -102,3 +102,46 @@ New clone setup: copy `appsettings.Development.json.template` → `appsettings.D
 
 ### 📖 Outcome
 No secrets are committed to the repository. Local development reads credentials from the Secret Manager, and production reads them from the environment or a secrets vault — verified end-to-end by running the app with `ASPNETCORE_ENVIRONMENT=Production` and `Jwt__SecretKey`/`Jwt__Issuer`/`Jwt__Audience` set as environment variables only (no `secrets.json` involved): register/login succeeded and issued a correctly-signed JWT. `dotnet test` remains green at 30/30.
+
+---
+
+## Task 5: Implement API Rate Limiting
+
+**Status:** Done
+
+### 🎯 Objective
+Protect the API from abuse and resource exhaustion by throttling excessive requests.
+
+### 🛡 Security Focus
+Mitigate Denial of Service (DoS) and brute-force attempts by capping request frequency per client.
+
+### 🛠 Implementation
+- `Extensions/RateLimitingServiceExtensions.cs` — `AddAppRateLimiting()` registers a named `"ip-sliding"` policy: `SlidingWindowRateLimiterOptions` partitioned by client IP (`PermitLimit = 20`, `Window = 10s`, `SegmentsPerWindow = 4`), with `OnRejected` returning 429
+- `Program.cs` — `AddAppRateLimiting()` registered as a service, `app.UseRateLimiter()` added to the pipeline before `MapControllers()`
+- `Controllers/AuthController.cs` — `[EnableRateLimiting("ip-sliding")]` applied only to `Login` (not `Register`, not the whole controller), scoping the blast radius to the brute-force scenario without affecting other endpoints or other tests' shared `AuthHelper` usage
+- `Program.cs`/DI setup refactored into `Extensions/AuthenticationServiceExtensions.cs` and `Extensions/RateLimitingServiceExtensions.cs` as part of this task, keeping the composition root thin
+- `DotNetSecurityFocused.Tests/Tests/RateLimitTests.cs` — loops up to 25 failed login attempts against a nonexistent user/wrong password and asserts a 429 once the limit is exceeded; isolated to its own `ApiFactory`/limiter state so it can't affect or be affected by other test classes
+
+### 📖 Outcome
+Clients exceeding 20 login attempts per 10-second window receive 429 Too Many Requests; normal traffic (including the existing 30 tests, none of which approach that threshold on `/auth/login`) is unaffected — verified by `dotnet test` at 31/31 passing.
+
+---
+
+## Task 6: Agentic Governance Guardrails
+
+**Status:** Planned
+
+### 🎯 Objective
+Build a validation wrapper that inspects AI-generated code snippets before they are accepted or executed.
+
+### 🛡 Security Focus
+Detect insecure code patterns (e.g., deprecated cryptography, unsafe APIs) introduced through AI-augmented workflows before they reach the codebase.
+
+### 🛠 Implementation Plan
+- Create a Guardrail service class as the central validation entry point
+- Implement a scanner that flags forbidden patterns (e.g., `Thread.Abort`, weak ciphers such as MD5/DES)
+- Document how this service acts as a security layer for AI-augmented development
+- Add unit tests covering both flagged and allowed code samples
+
+### 📖 Expected Outcome
+Snippets containing forbidden patterns are flagged and rejected with a clear reason, providing an auditable security checkpoint for AI-generated code.
