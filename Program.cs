@@ -6,6 +6,8 @@ using DotNetSecurityFocused.Models;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using DotNetSecurityFocused.Services;
+using FluentValidation;
+using DotNetSecurityFocused.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +48,9 @@ builder.Services.AddAuthentication(options=>
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!))
     };
 });
+
+// Add Validators
+builder.Services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
 
 // Add Product service
 builder.Services.AddScoped<ProductSearchService>();

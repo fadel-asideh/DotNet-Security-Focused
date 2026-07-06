@@ -26,6 +26,7 @@ public static class AuthHelper
         {
             Email = email,
             Password = "Test@123!",
+            ConfirmPassword = "Test@123!",
             Roles = roles
         });
 
