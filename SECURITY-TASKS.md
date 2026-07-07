@@ -1,6 +1,8 @@
 # Security Tasks
 
-This project works through .NET/ASP.NET Core security concepts one task at a time. Each task hardens a specific attack surface and leaves behind working code + tests that demonstrate the fix. This file is the index — what each task covers, where the code lives, and its current status.
+This repo is a hands-on tour of .NET/ASP.NET Core security engineering — one real attack surface at a time. Each task takes on a specific vulnerability class, grounded in the OWASP Top 10 and beyond, hardens it in working code, and proves the fix holds with tests — not just a description of what "should" be secure.
+
+This file is the index: what each task covers, which OWASP category it maps to, where the implementation lives, and its current status (Done / Planned).
 
 ---
 
@@ -12,6 +14,7 @@ This project works through .NET/ASP.NET Core security concepts one task at a tim
 Add authentication and role-based authorization to the API using JWT bearer tokens.
 
 ### 🛡 Security Focus
+Covers OWASP A07:2021 – Identification and Authentication Failures, and A01:2021 – Broken Access Control (via RBAC).
 - Stateless authentication via signed JWTs (HMAC-SHA256)
 - Role-based access control (RBAC) enforced per-endpoint
 - Prevent user enumeration on login (same error for unknown user vs. wrong password)
@@ -37,7 +40,7 @@ Add authentication and role-based authorization to the API using JWT bearer toke
 Harden the data access layer against injection attacks by standardizing on parameterized queries.
 
 ### 🛡 Security Focus
-Neutralize input-based injection vectors by strictly using parameterized queries instead of string concatenation in raw SQL.
+Covers OWASP A03:2021 – Injection. Neutralize input-based injection vectors by strictly using parameterized queries instead of string concatenation in raw SQL.
 
 ### 🛠 Implementation
 - `Product` entity/table dedicated to this exercise, seeded with sample rows plus one sensitive-looking row ("Admin Override Key") that a legitimate search should never surface
@@ -64,7 +67,7 @@ All data access paths use parameterized queries. Injection payloads are handled 
 Add rigorous validation to all incoming API requests before they reach business logic.
 
 ### 🛡 Security Focus
-Prevent malformed data and malicious payloads from propagating beyond the API boundary.
+Supports OWASP A03:2021 – Injection (a common defense-in-depth control, alongside Task 2's parameterized queries) and A04:2021 – Insecure Design (rejecting malformed input by design rather than downstream). Prevent malformed data and malicious payloads from propagating beyond the API boundary.
 
 ### 🛠 Implementation
 - `Models/AuthModels.cs` — Data Annotations on `RegisterRequest`/`LoginRequest` (`[Required]`, `[EmailAddress]`, `[MinLength]`/`[MaxLength]`), auto-enforced pre-action by `[ApiController]`'s built-in model-state validation
@@ -86,7 +89,7 @@ Invalid or malformed registration requests are rejected with 400 Bad Request bef
 Decouple sensitive credentials from the source code and version control.
 
 ### 🛡 Security Focus
-Prevent accidental credential exposure in public repositories and commit history.
+Covers OWASP A05:2021 – Security Misconfiguration (hardcoded credentials/secrets in source or config is a listed failure mode of this category). Prevent accidental credential exposure in public repositories and commit history.
 
 ### 🛠 Implementation
 - `.NET Secret Manager` (`dotnet user-secrets`) already configured for local development since Task 1 — `Jwt:SecretKey`, `Jwt:Issuer`, `Jwt:Audience` live outside the repo in `%APPDATA%\Microsoft\UserSecrets\<UserSecretsId>\secrets.json`
@@ -113,7 +116,7 @@ No secrets are committed to the repository. Local development reads credentials 
 Protect the API from abuse and resource exhaustion by throttling excessive requests.
 
 ### 🛡 Security Focus
-Mitigate Denial of Service (DoS) and brute-force attempts by capping request frequency per client.
+Covers OWASP A07:2021 – Identification and Authentication Failures (brute-force login attempts, explicitly listed under this category) and OWASP API Security Top 10 API4:2023 – Unrestricted Resource Consumption. Mitigate Denial of Service (DoS) and brute-force attempts by capping request frequency per client.
 
 ### 🛠 Implementation
 - `Extensions/RateLimitingServiceExtensions.cs` — `AddAppRateLimiting()` registers a named `"ip-sliding"` policy: `SlidingWindowRateLimiterOptions` partitioned by client IP (`PermitLimit = 20`, `Window = 10s`, `SegmentsPerWindow = 4`), with `OnRejected` returning 429
@@ -135,7 +138,7 @@ Clients exceeding 20 login attempts per 10-second window receive 429 Too Many Re
 Eliminate known-vulnerable dependencies flagged by NuGet's built-in security audit (`NU1903`) during restore/build.
 
 ### 🛡 Security Focus
-Unpatched dependencies are a supply-chain risk even when the vulnerable code path is never directly exercised by this project — treat build-time vulnerability warnings as defects to fix, not noise to suppress.
+Covers OWASP A06:2021 – Vulnerable and Outdated Components. Unpatched dependencies are a supply-chain risk even when the vulnerable code path is never directly exercised by this project — treat build-time vulnerability warnings as defects to fix, not noise to suppress.
 
 ### 🛠 Implementation
 Two advisories surfaced on `dotnet build`/`dotnet restore`:
@@ -154,7 +157,108 @@ Two advisories surfaced on `dotnet build`/`dotnet restore`:
 
 ---
 
-## Task 7: Agentic Governance Guardrails
+## Task 7: Authorization Beyond Roles (IDOR)
+
+**Status:** Planned
+
+### 🎯 Objective
+Ensure endpoints that return or modify a specific resource verify the caller owns/may access *that* resource, not just that they hold the right role.
+
+### 🛡 Security Focus
+Prevent Insecure Direct Object Reference (IDOR / broken object-level authorization — OWASP A01) — role checks alone don't stop User A from reading or modifying User B's data by guessing or incrementing an ID.
+
+### 🛠 Implementation Plan
+- Audit existing endpoints for any that accept a resource ID (user ID, order ID, etc.) and identify which ones currently trust the ID alone
+- Add an ownership check (resource's owning user ID == authenticated caller's ID, unless caller is Admin) before returning/mutating data
+- Add integration tests: User A authenticated, requests User B's resource by ID, expect 403/404 (not 200 with someone else's data)
+
+### 📖 Expected Outcome
+Resource-scoped endpoints reject cross-user access attempts even when the caller has a valid token and the "right" role, verified by tests that attempt exactly that cross-access.
+
+---
+
+## Task 8: Security Logging & Monitoring
+
+**Status:** Planned
+
+### 🎯 Objective
+Add an audit trail for security-relevant events so suspicious activity is visible after the fact, not just blocked in the moment.
+
+### 🛡 Security Focus
+Close OWASP A09 (Security Logging & Monitoring Failures) — today, failed logins, rate-limit rejections, and role/permission changes leave no queryable trace.
+
+### 🛠 Implementation Plan
+- Log structured events (not free-text) for: failed login attempts, 429 rate-limit rejections, role assignment changes, and authorization failures (403s)
+- Ensure logged events never include secrets, passwords, or full tokens — only identifiers needed for investigation (user ID, IP, timestamp, event type)
+- Add tests asserting a failed login/role change produces the expected log entry (via a test logger/sink)
+
+### 📖 Expected Outcome
+Security-relevant events are captured in structured, queryable logs with no sensitive data leakage, verified by tests inspecting the log sink after triggering each event type.
+
+---
+
+## Task 9: Cryptographic Choices Review
+
+**Status:** Planned
+
+### 🎯 Objective
+Explicitly verify and document the cryptographic choices already in use (password hashing, JWT signing) rather than relying on framework defaults going unexamined.
+
+### 🛡 Security Focus
+Close OWASP A02 (Cryptographic Failures) — using a secure default by accident isn't the same as knowing why it's secure and what would break that guarantee.
+
+### 🛠 Implementation Plan
+- Document which password hashing algorithm ASP.NET Core Identity uses by default (PBKDF2 with HMAC-SHA256, iteration count) and confirm it hasn't been weakened by configuration
+- Confirm JWT signing uses HMAC-SHA256 with a sufficiently long, high-entropy secret key (reference Task 4's secrets management), and document why HS256 is appropriate here vs. RS256
+- Add a test/assertion (or documented manual check) that the JWT secret key meets a minimum length/entropy bar
+
+### 📖 Expected Outcome
+A short written rationale for each cryptographic choice in the codebase, plus a check that the JWT signing key can't silently regress to a weak value.
+
+---
+
+## Task 10: JWT Revocation / Refresh-Token Rotation
+
+**Status:** Planned
+
+### 🎯 Objective
+Add a way to invalidate an issued JWT before its natural expiry (logout, compromised token, role change).
+
+### 🛡 Security Focus
+Covers OWASP A07:2021 – Identification and Authentication Failures (specifically, the "does not properly invalidate session/tokens" failure mode listed under this category). Today's JWTs are purely stateless — once issued, a token remains valid until expiry with no way to revoke it, even if the user's password changes or the account is disabled. This is a known, real limitation of naive JWT auth.
+
+### 🛠 Implementation Plan
+- Introduce short-lived access tokens plus a longer-lived refresh token, stored server-side (DB-backed) so it can be revoked
+- Add `POST /auth/refresh` and `POST /auth/logout` (the latter revokes the refresh token)
+- Rotate the refresh token on each use (single-use) to limit replay if one is stolen
+- Add tests: logout invalidates the refresh token, a revoked refresh token can't mint new access tokens, rotation rejects reuse of an old refresh token
+
+### 📖 Expected Outcome
+Access tokens remain short-lived and stateless for performance, but the overall session can be revoked on demand — verified by tests proving a logged-out or rotated-away token no longer works.
+
+---
+
+## Task 11: Security Response Headers
+
+**Status:** Planned
+
+### 🎯 Objective
+Add standard secure-by-default HTTP response headers across all endpoints.
+
+### 🛡 Security Focus
+Covers OWASP A05:2021 – Security Misconfiguration (missing security headers is explicitly listed under this category). Defense-in-depth against clickjacking, MIME-sniffing, and protocol-downgrade attacks — cheap to add, expected on any production-grade API.
+
+### 🛠 Implementation Plan
+- Add middleware (or use a small package) to set `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`/`frame-ancestors 'none'`, and a minimal `Content-Security-Policy` appropriate for a JSON API
+- Remove/suppress the `Server` response header that identifies Kestrel
+- Add a test asserting these headers are present on a sample response
+
+### 📖 Expected Outcome
+All API responses carry secure-by-default headers, verified by a test inspecting response headers on a representative endpoint.
+
+---
+
+## Task 12: Agentic Governance Guardrails
 
 **Status:** Planned
 
@@ -162,7 +266,7 @@ Two advisories surfaced on `dotnet build`/`dotnet restore`:
 Build a validation wrapper that inspects AI-generated code snippets before they are accepted or executed.
 
 ### 🛡 Security Focus
-Detect insecure code patterns (e.g., deprecated cryptography, unsafe APIs) introduced through AI-augmented workflows before they reach the codebase.
+Not a single OWASP Top 10 category itself (it's a process/tooling control) — but the patterns it catches map to OWASP A02:2021 – Cryptographic Failures (weak ciphers like MD5/DES) and A06:2021 – Vulnerable and Outdated Components (deprecated/unsafe APIs). Detect insecure code patterns introduced through AI-augmented workflows before they reach the codebase.
 
 ### 🛠 Implementation Plan
 - Create a Guardrail service class as the central validation entry point
