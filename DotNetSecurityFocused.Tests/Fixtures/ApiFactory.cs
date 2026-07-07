@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using DotNetSecurityFocused.Data;
 
 namespace DotNetSecurityFocused.Tests.Fixtures;
@@ -11,8 +12,9 @@ namespace DotNetSecurityFocused.Tests.Fixtures;
 public class ApiFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
-
-     public ApiFactory()
+    public ListLoggerProvider LogProvider { get; } = new();
+    
+    public ApiFactory()
     {
         _connection.Open();
 
@@ -48,6 +50,11 @@ public class ApiFactory : WebApplicationFactory<Program>
                 ["Jwt:Issuer"] = "DotNetSecurityFocused",
                 ["Jwt:Audience"] = "DotNetSecurityFocusedUsers"
             });
+        });
+
+        builder.ConfigureLogging(logging =>
+        {
+            logging.AddProvider(LogProvider);
         });
 
         builder.UseEnvironment("Testing");

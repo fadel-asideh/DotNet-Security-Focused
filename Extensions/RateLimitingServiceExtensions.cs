@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using DotNetSecurityFocused.Services;
 
 namespace DotNetSecurityFocused.Extensions;
 
@@ -21,6 +22,10 @@ public static class RateLimitingServiceExtensions
                     }));
             options.OnRejected = async (context, token) =>
             {
+                var securityEventLogger = context.HttpContext.RequestServices.GetRequiredService<ISecurityEventLogger>();
+                var ipAddress = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                securityEventLogger.LogRateLimitRejected(ipAddress, context.HttpContext.Request.Path);
+                
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", token);
             };
