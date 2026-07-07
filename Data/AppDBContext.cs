@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using DotNetSecurityFocused.Models;
+using DotNetSecurityFocused.Models.Entities;
 
 namespace DotNetSecurityFocused.Data;
 public class AppDBContext : IdentityDbContext<ApplicationUser>

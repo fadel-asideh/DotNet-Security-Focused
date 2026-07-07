@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Identity;
-using DotNetSecurityFocused.Models;
+using DotNetSecurityFocused.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace DotNetSecurityFocused.Data;

@@ -1,5 +1,5 @@
 using DotNetSecurityFocused.Data;
-using DotNetSecurityFocused.Models;
+using DotNetSecurityFocused.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 

@@ -1,4 +1,5 @@
-using DotNetSecurityFocused.Models;
+using DotNetSecurityFocused.Models.DTOs;
+using DotNetSecurityFocused.Models.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;

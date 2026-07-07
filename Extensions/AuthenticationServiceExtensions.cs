@@ -1,6 +1,6 @@
 using System.Text;
 using DotNetSecurityFocused.Data;
-using DotNetSecurityFocused.Models;
+using DotNetSecurityFocused.Models.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;

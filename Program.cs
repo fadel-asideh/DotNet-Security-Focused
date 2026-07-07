@@ -1,5 +1,5 @@
 using DotNetSecurityFocused.Data;
-using DotNetSecurityFocused.Models;
+using DotNetSecurityFocused.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using DotNetSecurityFocused.Services;
 using FluentValidation;

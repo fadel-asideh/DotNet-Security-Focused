@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace DotNetSecurityFocused.Models;
+namespace DotNetSecurityFocused.Models.DTOs;
 
 public class RegisterRequest
 {
