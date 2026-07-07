@@ -16,6 +16,7 @@ builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddAppRateLimiting();
 builder.Services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
 builder.Services.AddScoped<ProductSearchService>();
+builder.Services.AddScoped<OrderService>();
 
 var app = builder.Build();
 

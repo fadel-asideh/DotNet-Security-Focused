@@ -6,6 +6,8 @@ namespace DotNetSecurityFocused.Data;
 public class AppDBContext : IdentityDbContext<ApplicationUser>
 {
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<Order> Orders => Set<Order>();
+
     public AppDBContext(DbContextOptions<AppDBContext> options) : base(options)
     {
         
