@@ -209,7 +209,7 @@ Failed logins, rate-limit rejections, role assignments, and 403 authorization fa
 
 ## Task 9: Cryptographic Choices Review
 
-**Status:** Planned
+**Status:** Done
 
 ### 🎯 Objective
 Explicitly verify and document the cryptographic choices already in use (password hashing, JWT signing) rather than relying on framework defaults going unexamined.
@@ -217,13 +217,14 @@ Explicitly verify and document the cryptographic choices already in use (passwor
 ### 🛡 Security Focus
 Close OWASP A02 (Cryptographic Failures) — using a secure default by accident isn't the same as knowing why it's secure and what would break that guarantee.
 
-### 🛠 Implementation Plan
-- Document which password hashing algorithm ASP.NET Core Identity uses by default (PBKDF2 with HMAC-SHA256, iteration count) and confirm it hasn't been weakened by configuration
-- Confirm JWT signing uses HMAC-SHA256 with a sufficiently long, high-entropy secret key (reference Task 4's secrets management), and document why HS256 is appropriate here vs. RS256
-- Add a test/assertion (or documented manual check) that the JWT secret key meets a minimum length/entropy bar
+### 🛠 Implementation
+- **Password hashing** — confirmed no `PasswordHasherOptions` override exists anywhere in the project, so ASP.NET Core Identity's pure default applies: PBKDF2 with HMAC-SHA256, 128-bit salt, 256-bit derived key, 100,000 iterations.
+- **JWT signing** — `Controllers/AuthController.cs` signs with `HmacSha256` (HS256). Checked the actual configured dev secret key's *length* (not its value): 69 characters ≈ 552 bits, comfortably above the 256-bit minimum HS256 needs. HS256 (symmetric) is appropriate here rather than RS256 (asymmetric) because this API is both the sole issuer and sole verifier of its own tokens — RS256 earns its complexity when a third party needs to verify tokens without holding signing capability (e.g., multiple services trusting one auth server's public key). Revisit this choice if the project ever splits into multiple services.
+- `Extensions/AuthenticationServiceExtensions.cs` — `AddAppAuthentication` now validates the configured `Jwt:SecretKey` is present and at least 32 bytes (256 bits) before building `TokenValidationParameters`, throwing `InvalidOperationException` if not. The check lives inside the `AddJwtBearer` configure callback (deferred, resolved on first use) rather than evaluated eagerly at service-registration time — the latter looked more "fail-fast" but broke under `WebApplicationFactory`'s minimal-hosting test host, since its `ConfigureAppConfiguration` overrides aren't guaranteed merged into `builder.Configuration` until `Build()` completes, after `Program.cs`'s own top-level statements have already run.
+- `DotNetSecurityFocused.Tests/Tests/CryptographicConfigurationTests.cs` — plain unit tests (no `ApiFactory`/HTTP needed, since this is configuration-time behavior) proving a too-short key throws when `JwtBearerOptions` are resolved, and a sufficiently long key doesn't.
 
-### 📖 Expected Outcome
-A short written rationale for each cryptographic choice in the codebase, plus a check that the JWT signing key can't silently regress to a weak value.
+### 📖 Outcome
+Password hashing and JWT signing choices are verified against the actual running configuration rather than assumed, and a weak/missing signing key can no longer pass silently — verified by 2 new tests (40 total passing across the project).
 
 ---
 
