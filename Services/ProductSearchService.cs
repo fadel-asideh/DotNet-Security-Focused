@@ -39,12 +39,14 @@ public class ProductSearchService
     }
 
     // VULNERABLE - reference example only. Never called from a controller.
+    #pragma warning disable EF1002 // FromSqlRaw inserts interpolated strings directly into the SQL
     public async Task<List<Product>> SearchByNameVulnerableAsync(string name)
     {
         return await _context.Products
             .FromSqlRaw($"SELECT * FROM Products WHERE Name LIKE '%{name}%'")
             .ToListAsync();
     }
+    #pragma warning restore EF1002
 
     // SAFE - preferred approach, plain LINQ
     public async Task<List<Product>> SearchByNameSafeAsync(string name)

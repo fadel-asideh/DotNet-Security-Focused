@@ -127,7 +127,34 @@ Clients exceeding 20 login attempts per 10-second window receive 429 Too Many Re
 
 ---
 
-## Task 6: Agentic Governance Guardrails
+## Task 6: Resolve NuGet Vulnerability Warnings
+
+**Status:** Done
+
+### 🎯 Objective
+Eliminate known-vulnerable dependencies flagged by NuGet's built-in security audit (`NU1903`) during restore/build.
+
+### 🛡 Security Focus
+Unpatched dependencies are a supply-chain risk even when the vulnerable code path is never directly exercised by this project — treat build-time vulnerability warnings as defects to fix, not noise to suppress.
+
+### 🛠 Implementation
+Two advisories surfaced on `dotnet build`/`dotnet restore`:
+
+1. **`Microsoft.OpenApi` — GHSA-v5pm-xwqc-g5wc (CVE-2026-49451, high, CVSS 7.5)**
+   Circular `$ref` schemas in an OpenAPI document can crash the process parsing it (stack overflow / DoS). Pulled in transitively by `Microsoft.AspNetCore.OpenApi 10.0.9`'s `AddOpenApi()`/`MapOpenApi()`, which this project had wired up from scaffolding but never actually used (no Swagger UI, no `/openapi` consumers).
+   There is no patched `Microsoft.AspNetCore.OpenApi 10.0.x` yet that bumps its `Microsoft.OpenApi` dependency past the vulnerable range — a version bump isn't available today.
+   **Fix:** removed `AddOpenApi()`/`MapOpenApi()` from `Program.cs` and dropped the `Microsoft.AspNetCore.OpenApi` package reference entirely. Since the feature was unused, deleting it is the correct fix, not a workaround — if OpenAPI docs are needed later, re-add the package then and re-check for a patched version at that time.
+
+2. **`SQLitePCLRaw.lib.e_sqlite3` — GHSA-2m69-gcr7-jv3q (CVE-2025-6965, high, CVSS 9.8)**
+   Bundled SQLite version has a memory-corruption bug (aggregate terms exceeding available columns). Pulled in transitively by `Microsoft.EntityFrameworkCore.Sqlite 10.0.9`, which has no newer `10.0.x` release with a patched bundle.
+   **Fix:** added a direct `PackageReference` to `SQLitePCLRaw.bundle_e_sqlite3` version `3.0.3` in `DotNetSecurityFocused.csproj`. NuGet's "nearest wins" resolution means an explicit direct reference overrides the version requested by a transitive dependency, without needing to touch the EF Core package itself. The override only needed to be added once — `DotNetSecurityFocused.Tests.csproj` inherits it through its `ProjectReference` to the main project, since restore resolves the whole dependency graph together.
+
+### 📖 Outcome
+`dotnet build` reports 0 warnings (previously 2 `NU1903` advisories). `dotnet test` confirms no regression from the SQLite native-interop major-version bump — 31/31 passing.
+
+---
+
+## Task 7: Agentic Governance Guardrails
 
 **Status:** Planned
 

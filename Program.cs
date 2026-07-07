@@ -10,7 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddDbContext<AppDBContext>(options => options.UseSqlite("Data Source=app.db"));
 builder.Services.AddAppAuthentication(builder.Configuration);
@@ -23,12 +22,6 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     await DBSeeder.SeedDataAsync(scope.ServiceProvider);
-}
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
