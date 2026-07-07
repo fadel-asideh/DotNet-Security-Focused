@@ -1,5 +1,5 @@
 
-namespace DotNetSecurityFocused.Models;
+namespace DotNetSecurityFocused.Models.Entities;
 
 public class Product
 {

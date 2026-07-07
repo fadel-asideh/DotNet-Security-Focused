@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using DotNetSecurityFocused.Models;
+using DotNetSecurityFocused.Models.Entities;
 using DotNetSecurityFocused.Services;
 using DotNetSecurityFocused.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;

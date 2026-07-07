@@ -1,5 +1,5 @@
 using DotNetSecurityFocused.Data;
-using DotNetSecurityFocused.Models;
+using DotNetSecurityFocused.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using DotNetSecurityFocused.Services;
 using FluentValidation;
@@ -16,6 +16,7 @@ builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddAppRateLimiting();
 builder.Services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
 builder.Services.AddScoped<ProductSearchService>();
+builder.Services.AddScoped<OrderService>();
 
 var app = builder.Build();
 

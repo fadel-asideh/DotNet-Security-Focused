@@ -1,5 +1,5 @@
 
-using DotNetSecurityFocused.Models;
+using DotNetSecurityFocused.Models.DTOs;
 using FluentValidation;
 
 namespace DotNetSecurityFocused.Validators;
