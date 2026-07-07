@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using DotNetSecurityFocused.Data;
 using FluentValidation;
 using Microsoft.AspNetCore.RateLimiting;
+using DotNetSecurityFocused.Services;
 
 namespace DotNetSecurityFocused.Controllers;
 
@@ -22,9 +23,14 @@ public class AuthController : ControllerBase
     private readonly IValidator<RegisterRequest> _registerValidator;
     private readonly AppDBContext _appDbContext;
     private readonly ILogger<AuthController> _logger;
+    private readonly ISecurityEventLogger _securityEventLogger;
     private readonly IConfiguration _configuration;
 
-    public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, SignInManager<ApplicationUser> signInManager, IValidator<RegisterRequest> registerValidator, AppDBContext appDBContext, ILogger<AuthController> logger, IConfiguration configuration)
+    public AuthController(
+        UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, SignInManager<ApplicationUser> signInManager,
+        IValidator<RegisterRequest> registerValidator, AppDBContext appDBContext, ILogger<AuthController> logger,
+        ISecurityEventLogger securityEventLogger, IConfiguration configuration
+    )
     {
         _userManager = userManager;
         _roleManager = roleManager;
@@ -32,6 +38,7 @@ public class AuthController : ControllerBase
         _registerValidator = registerValidator;
         _appDbContext = appDBContext;
         _logger = logger;
+        _securityEventLogger = securityEventLogger;
         _configuration = configuration;
     }
 
@@ -66,8 +73,11 @@ public class AuthController : ControllerBase
                 return BadRequest(result.Errors);
             }
             foreach(string role in request.Roles)
+            {
                 await _userManager.AddToRoleAsync(user, role);
-            
+                 _securityEventLogger.LogRoleAssigned(user.Id, role);
+            }
+
             await transaction.CommitAsync();
             return Ok(new { message = "User registered successfully" });
         }
@@ -87,12 +97,14 @@ public class AuthController : ControllerBase
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user == null)
         {
+            _securityEventLogger.LogLoginFailed(request.Email, GetClientIp());
             return Unauthorized(new { message = "Invalid credentials" });
         }
         var result = await _signInManager.PasswordSignInAsync(user, request.Password, false, false);
     
         if (!result.Succeeded)
         {
+            _securityEventLogger.LogLoginFailed(request.Email, GetClientIp());
             return Unauthorized(new { message = "Invalid credentials" });
         }
         var token = await GenerateJwtToken(user);
@@ -128,4 +140,6 @@ public class AuthController : ControllerBase
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    private string GetClientIp() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 }
