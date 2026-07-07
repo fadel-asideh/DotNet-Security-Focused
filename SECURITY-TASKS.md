@@ -159,7 +159,7 @@ Two advisories surfaced on `dotnet build`/`dotnet restore`:
 
 ## Task 7: Authorization Beyond Roles (IDOR)
 
-**Status:** Planned
+**Status:** Done
 
 ### 🎯 Objective
 Ensure endpoints that return or modify a specific resource verify the caller owns/may access *that* resource, not just that they hold the right role.
@@ -167,19 +167,26 @@ Ensure endpoints that return or modify a specific resource verify the caller own
 ### 🛡 Security Focus
 Prevent Insecure Direct Object Reference (IDOR / broken object-level authorization — OWASP A01) — role checks alone don't stop User A from reading or modifying User B's data by guessing or incrementing an ID.
 
-### 🛠 Implementation Plan
-- Audit existing endpoints for any that accept a resource ID (user ID, order ID, etc.) and identify which ones currently trust the ID alone
-- Add an ownership check (resource's owning user ID == authenticated caller's ID, unless caller is Admin) before returning/mutating data
-- Add integration tests: User A authenticated, requests User B's resource by ID, expect 403/404 (not 200 with someone else's data)
+### 🛠 Implementation
+- `Models/Order.cs` — first user-owned resource in the API (`UserId`, `ProductName`, `Quantity`, `TotalPrice`)
+- `Models/OrderModels.cs` — `CreateOrderRequest` DTO deliberately has no `UserId` field, so ownership can never be set by the client; the server always derives it from the authenticated caller's JWT
+- `Services/OrderService.cs`:
+  - `GetOrderByIdVulnerableAsync` — deliberately unsafe, returns any order by ID with no ownership check, kept as a documented reference example, never wired to a controller route
+  - `GetOrderByIdSafeAsync` — enforces `order.UserId == requestingUserId` unless the caller is Admin; returns `null` (not found) rather than leaking that the ID exists
+- `Controllers/OrdersController.cs` — `POST /orders`, `GET /orders/{id}`, wired only to the safe method
+- `DotNetSecurityFocused.Tests/Tests/OrderAuthorizationTests.cs`:
+  - Proves the vulnerable service method leaks another user's order when called directly
+  - Proves the live `GET /orders/{id}` endpoint returns 404 for a different authenticated user's order
+  - Confirms the legitimate owner can still fetch their own order
 
-### 📖 Expected Outcome
-Resource-scoped endpoints reject cross-user access attempts even when the caller has a valid token and the "right" role, verified by tests that attempt exactly that cross-access.
+### 📖 Outcome
+Resource-scoped endpoints reject cross-user access attempts even when the caller has a valid token and the "right" role — verified by 3 new tests (34 total passing across the project).
 
 ---
 
 ## Task 8: Security Logging & Monitoring
 
-**Status:** Planned
+**Status:** Done
 
 ### 🎯 Objective
 Add an audit trail for security-relevant events so suspicious activity is visible after the fact, not just blocked in the moment.
@@ -187,13 +194,16 @@ Add an audit trail for security-relevant events so suspicious activity is visibl
 ### 🛡 Security Focus
 Close OWASP A09 (Security Logging & Monitoring Failures) — today, failed logins, rate-limit rejections, and role/permission changes leave no queryable trace.
 
-### 🛠 Implementation Plan
-- Log structured events (not free-text) for: failed login attempts, 429 rate-limit rejections, role assignment changes, and authorization failures (403s)
-- Ensure logged events never include secrets, passwords, or full tokens — only identifiers needed for investigation (user ID, IP, timestamp, event type)
-- Add tests asserting a failed login/role change produces the expected log entry (via a test logger/sink)
+### 🛠 Implementation
+- `Services/SecurityEventLogger.cs` — `ISecurityEventLogger` deliberately exposes only narrow, named events (`LogLoginFailed`, `LogRateLimitRejected`, `LogRoleAssigned`, `LogAuthorizationFailure`), each logged as structured `ILogger` fields (not a free-text string), so there's no method shape that could accept a password or full token
+- `Controllers/AuthController.cs` — `Login` logs a failed-login event on both the "user not found" and "wrong password" branches (same event either way, preserving the existing anti-enumeration behavior from Task 1); `Register` logs a role-assigned event per role granted
+- `Extensions/RateLimitingServiceExtensions.cs` — the existing `OnRejected` callback resolves `ISecurityEventLogger` from `HttpContext.RequestServices` and logs the rejection alongside the 429 response
+- `Authorization/LoggingAuthorizationMiddlewareResultHandler.cs` — decorates the framework's default `IAuthorizationMiddlewareResultHandler`; logs only when `authorizeResult.Forbidden` (a real 403 — authenticated but insufficient role), deliberately excluding `Challenged` (401 — missing/invalid token) to avoid noise from anonymous or expired-token requests; registered in `Program.cs` after `AddAppAuthentication`, since DI resolves the last-registered implementation for the interface
+- `DotNetSecurityFocused.Tests/Fixtures/ListLoggerProvider.cs` — a minimal in-memory `ILoggerProvider` capturing formatted log messages, wired into `ApiFactory` for the test host
+- `DotNetSecurityFocused.Tests/Tests/SecurityLoggingTests.cs` — one test per event type (login failed, role assigned, rate limit rejected, authorization failure), plus an explicit assertion that a failed-login log entry never contains the submitted password
 
-### 📖 Expected Outcome
-Security-relevant events are captured in structured, queryable logs with no sensitive data leakage, verified by tests inspecting the log sink after triggering each event type.
+### 📖 Outcome
+Failed logins, rate-limit rejections, role assignments, and 403 authorization failures are all captured as structured, queryable log events with no sensitive data leakage — verified by 4 new tests (38 total passing across the project).
 
 ---
 
