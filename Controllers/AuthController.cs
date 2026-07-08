@@ -20,6 +20,7 @@ public class AuthController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly RefreshTokenService _refreshTokenService;
     private readonly IValidator<RegisterRequest> _registerValidator;
     private readonly AppDBContext _appDbContext;
     private readonly ILogger<AuthController> _logger;
@@ -28,13 +29,14 @@ public class AuthController : ControllerBase
 
     public AuthController(
         UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, SignInManager<ApplicationUser> signInManager,
-        IValidator<RegisterRequest> registerValidator, AppDBContext appDBContext, ILogger<AuthController> logger,
-        ISecurityEventLogger securityEventLogger, IConfiguration configuration
+        RefreshTokenService refreshTokenService, IValidator<RegisterRequest> registerValidator, AppDBContext appDBContext,
+        ILogger<AuthController> logger, ISecurityEventLogger securityEventLogger, IConfiguration configuration
     )
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _signInManager = signInManager;
+        _refreshTokenService = refreshTokenService;
         _registerValidator = registerValidator;
         _appDbContext = appDBContext;
         _logger = logger;
@@ -108,7 +110,30 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid credentials" });
         }
         var token = await GenerateJwtToken(user);
-        return Ok(new { token = token });
+        var refreshToken = await _refreshTokenService.IssueAsync(user.Id);
+        return Ok(new { token = token, refreshToken });
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+    {
+        var result = await _refreshTokenService.RotateAsync(request.RefreshToken);
+        if (result == null)
+            return Unauthorized(new { message = "Invalid or expired refresh token" });
+
+        var user = await _userManager.FindByIdAsync(result.Value.UserId);
+        if (user == null)
+            return Unauthorized(new { message = "Invalid or expired refresh token" });
+
+        var newAccessToken = await GenerateJwtToken(user);
+        return Ok(new { token = newAccessToken, refreshToken = result.Value.NewRefreshToken });
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] LogoutRequest request)
+    {
+        await _refreshTokenService.RevokeAsync(request.RefreshToken);
+        return Ok(new { message = "Logged out" });
     }
 
     private async Task<string> GenerateJwtToken(ApplicationUser user)
@@ -134,7 +159,7 @@ public class AuthController : ControllerBase
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
+            expires: DateTime.UtcNow.AddMinutes(15),
             signingCredentials: credentials
         );
 

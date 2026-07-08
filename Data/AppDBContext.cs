@@ -8,6 +8,8 @@ public class AppDBContext : IdentityDbContext<ApplicationUser>
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Order> Orders => Set<Order>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    
     public AppDBContext(DbContextOptions<AppDBContext> options) : base(options)
     {
         

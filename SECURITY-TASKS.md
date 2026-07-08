@@ -230,7 +230,7 @@ Password hashing and JWT signing choices are verified against the actual running
 
 ## Task 10: JWT Revocation / Refresh-Token Rotation
 
-**Status:** Planned
+**Status:** Done
 
 ### 🎯 Objective
 Add a way to invalidate an issued JWT before its natural expiry (logout, compromised token, role change).
@@ -238,14 +238,21 @@ Add a way to invalidate an issued JWT before its natural expiry (logout, comprom
 ### 🛡 Security Focus
 Covers OWASP A07:2021 – Identification and Authentication Failures (specifically, the "does not properly invalidate session/tokens" failure mode listed under this category). Today's JWTs are purely stateless — once issued, a token remains valid until expiry with no way to revoke it, even if the user's password changes or the account is disabled. This is a known, real limitation of naive JWT auth.
 
-### 🛠 Implementation Plan
-- Introduce short-lived access tokens plus a longer-lived refresh token, stored server-side (DB-backed) so it can be revoked
-- Add `POST /auth/refresh` and `POST /auth/logout` (the latter revokes the refresh token)
-- Rotate the refresh token on each use (single-use) to limit replay if one is stolen
-- Add tests: logout invalidates the refresh token, a revoked refresh token can't mint new access tokens, rotation rejects reuse of an old refresh token
+### 🛠 Implementation
+- `Controllers/AuthController.cs` — access token lifetime shrunk from 1 hour to 15 minutes; `Login` now also issues a refresh token alongside the existing access token (the JSON field name `token` was kept as-is, only `refreshToken` was added, so the ~40 existing tests built on `AuthHelper`/`TokenResponse` needed no changes)
+- `Models/Entities/RefreshToken.cs` — `UserId`, `TokenHash`, `ExpiresAt`, `RevokedAt`; only a SHA-256 hash of the token is persisted, never the raw value, so a DB leak alone can't hand out usable refresh tokens
+- `Services/RefreshTokenService.cs`:
+  - `IssueAsync` — generates a 256-bit random opaque token (not a JWT), stores its hash
+  - `RotateAsync` — validates the presented token is unexpired and unrevoked, revokes it, and issues a replacement in the same operation; a stolen-but-already-rotated-away token fails lookup because it's marked revoked, which is what rejects reuse
+  - `RevokeAsync` — used by logout; doesn't reveal whether the token existed, mirroring Task 1's anti-enumeration approach
+- `Controllers/AuthController.cs` — `POST /auth/refresh` (rotates and returns new tokens), `POST /auth/logout` (revokes)
+- `DotNetSecurityFocused.Tests/Tests/RefreshTokenTests.cs`:
+  - A valid refresh token returns a new token pair, different from the original
+  - Reusing an already-rotated-away refresh token returns 401
+  - Logging out, then attempting to refresh with that token, returns 401
 
-### 📖 Expected Outcome
-Access tokens remain short-lived and stateless for performance, but the overall session can be revoked on demand — verified by tests proving a logged-out or rotated-away token no longer works.
+### 📖 Outcome
+Access tokens remain short-lived and stateless for performance, but the overall session can now be revoked on demand — a logged-out or rotated-away refresh token can never mint a new access token — verified by 3 new tests (43 total passing across the project).
 
 ---
 

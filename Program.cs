@@ -20,6 +20,7 @@ builder.Services.AddAppRateLimiting();
 builder.Services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
 builder.Services.AddScoped<ProductSearchService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddSingleton<ISecurityEventLogger, SecurityEventLogger>();
 
 var app = builder.Build();
