@@ -258,7 +258,7 @@ Access tokens remain short-lived and stateless for performance, but the overall 
 
 ## Task 11: Security Response Headers
 
-**Status:** Planned
+**Status:** Done
 
 ### 🎯 Objective
 Add standard secure-by-default HTTP response headers across all endpoints.
@@ -266,13 +266,16 @@ Add standard secure-by-default HTTP response headers across all endpoints.
 ### 🛡 Security Focus
 Covers OWASP A05:2021 – Security Misconfiguration (missing security headers is explicitly listed under this category). Defense-in-depth against clickjacking, MIME-sniffing, and protocol-downgrade attacks — cheap to add, expected on any production-grade API.
 
-### 🛠 Implementation Plan
-- Add middleware (or use a small package) to set `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`/`frame-ancestors 'none'`, and a minimal `Content-Security-Policy` appropriate for a JSON API
-- Remove/suppress the `Server` response header that identifies Kestrel
-- Add a test asserting these headers are present on a sample response
+### 🛠 Implementation
+- `Extensions/SecurityHeadersExtensions.cs` — `UseSecurityHeaders()` middleware sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` (a pure JSON API has no legitimate reason to load any sub-resource, so denying everything is the correct default, not just a strict one) on every response, registered as the first middleware in the pipeline so it applies even to error responses
+- `Program.cs` — `app.UseHsts()` added (framework built-in, guarded by `!IsDevelopment()`, the standard pattern); `builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false)` suppresses the `Server: Kestrel` header
+- `DotNetSecurityFocused.Tests/Tests/SecurityHeadersTests.cs`:
+  - Confirms `X-Content-Type-Options`, `X-Frame-Options`, and `Content-Security-Policy` are present on a real response
+  - Confirms `Strict-Transport-Security` is present on an HTTPS request — required pointing the test client's `BaseAddress` at a non-`localhost` host, since `HstsMiddleware` deliberately excludes `localhost`/`127.0.0.1`/`[::1]` by default (so local development over `https://localhost` never gets HSTS-pinned in a browser)
+  - No test for the `Server` header removal — `WebApplicationFactory`'s in-memory `TestServer` bypasses Kestrel entirely, so that specific change can't be verified through this test host; it's a manual/production-only check (e.g., `curl -I` against the running app)
 
-### 📖 Expected Outcome
-All API responses carry secure-by-default headers, verified by a test inspecting response headers on a representative endpoint.
+### 📖 Outcome
+All API responses carry secure-by-default headers, and the app no longer discloses that it runs on Kestrel — verified by 2 new tests (45 total passing across the project).
 
 ---
 

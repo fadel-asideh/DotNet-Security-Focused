@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
@@ -28,6 +29,13 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     await DBSeeder.SeedDataAsync(scope.ServiceProvider);
+}
+
+app.UseSecurityHeaders();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
