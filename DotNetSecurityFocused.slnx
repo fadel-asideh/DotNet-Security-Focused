@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="DotNetSecurityFocused.csproj" />
+  <Project Path="DotNetSecurityFocused.Guardrails/DotNetSecurityFocused.Guardrails.csproj" />
   <Project Path="DotNetSecurityFocused.Tests/DotNetSecurityFocused.Tests.csproj" />
 </Solution>

@@ -9,6 +9,17 @@
 
   <ItemGroup>
     <Compile Remove="DotNetSecurityFocused.Tests/**" />
+    <Compile Remove="DotNetSecurityFocused.Guardrails/**" />
+    <Compile Remove="Tools/**" />
+    <Content Remove="DotNetSecurityFocused.Tests/**" />
+    <Content Remove="DotNetSecurityFocused.Guardrails/**" />
+    <Content Remove="Tools/**" />
+    <None Remove="DotNetSecurityFocused.Tests/**" />
+    <None Remove="DotNetSecurityFocused.Guardrails/**" />
+    <None Remove="Tools/**" />
+    <EmbeddedResource Remove="DotNetSecurityFocused.Tests/**" />
+    <EmbeddedResource Remove="DotNetSecurityFocused.Guardrails/**" />
+    <EmbeddedResource Remove="Tools/**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +33,10 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="DotNetSecurityFocused.Guardrails\DotNetSecurityFocused.Guardrails.csproj" />
   </ItemGroup>
 
 </Project>
