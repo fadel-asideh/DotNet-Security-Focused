@@ -281,7 +281,7 @@ All API responses carry secure-by-default headers, and the app no longer disclos
 
 ## Task 12: Agentic Governance Guardrails
 
-**Status:** Planned
+**Status:** Done
 
 ### 🎯 Objective
 Build a validation wrapper that inspects AI-generated code snippets before they are accepted or executed.
@@ -289,11 +289,15 @@ Build a validation wrapper that inspects AI-generated code snippets before they 
 ### 🛡 Security Focus
 Not a single OWASP Top 10 category itself (it's a process/tooling control) — but the patterns it catches map to OWASP A02:2021 – Cryptographic Failures (weak ciphers like MD5/DES) and A06:2021 – Vulnerable and Outdated Components (deprecated/unsafe APIs). Detect insecure code patterns introduced through AI-augmented workflows before they reach the codebase.
 
-### 🛠 Implementation Plan
-- Create a Guardrail service class as the central validation entry point
-- Implement a scanner that flags forbidden patterns (e.g., `Thread.Abort`, weak ciphers such as MD5/DES)
-- Document how this service acts as a security layer for AI-augmented development
-- Add unit tests covering both flagged and allowed code samples
+### 🛠 Implementation
+- `DotNetSecurityFocused.Guardrails/` — a standalone class library (no ASP.NET Core/EF Core dependency), extracted rather than left inside the main web project, since both the API and the CLI below need to consume it independently as siblings, not have one depend on the other
+  - `CodeGuardrail`/`ICodeGuardrail` — regex-based rule scanner, deliberately documented as a heuristic (not type-aware syntax analysis), flagging weak crypto (MD5, DES/TripleDES, RC4, SHA1), `.Abort(`-style calls (Thread.Abort's known danger), `BinaryFormatter` (insecure deserialization), and a hardcoded-secret literal pattern (ties back to Task 4)
+  - `GuardrailResult`/`GuardrailViolation` — each violation carries a clear, specific reason, not just a pass/fail flag
+- `Tools/GuardrailCli/` — a small console project referencing only the Guardrails library (not the whole web app), takes file paths as arguments, scans each, and exits non-zero if any violations are found
+- `.git/hooks/pre-commit` — scans staged `.cs` files on every commit and blocks it if the CLI reports violations; deliberately excludes the Guardrails library, its own tests, and the CLI project itself from being scanned, since those files legitimately contain the forbidden pattern strings (as rule definitions and test fixtures) and would otherwise always flag themselves
+- `DotNetSecurityFocused.Tests/Tests/CodeGuardrailTests.cs` — unit tests proving each rule fires on a bad sample and a clean sample produces no violations
+- Verified end-to-end, not just unit-tested in isolation: staged a file containing `MD5.Create()` and confirmed `git commit` was genuinely refused with a clear reason; removed the line and confirmed the tree returns to a clean, committable state
+- A real production team would typically reach for Roslyn's built-in security analyzers (`CA5350`/`CA5351` for weak crypto, `CA2300`-series for insecure deserialization) and/or SecurityCodeScan/gitleaks rather than a bespoke regex scanner — those are type-aware and far more accurate. This hand-built version exists to demonstrate understanding of the underlying vulnerability classes and how to operationalize a check into a real workflow gate, not to replace those tools
 
-### 📖 Expected Outcome
-Snippets containing forbidden patterns are flagged and rejected with a clear reason, providing an auditable security checkpoint for AI-generated code.
+### 📖 Outcome
+Snippets containing forbidden patterns are flagged and rejected with a clear reason — and this isn't just a class with tests sitting unused, it's wired into a real git commit gate that was proven to actually block a bad commit and allow a clean one through, verified by 5 new unit tests (50 total passing across the project) plus a live end-to-end commit test.
