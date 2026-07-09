@@ -25,8 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DotNetSecurityFocused.csproj" />
-    <ProjectReference Include="..\DotNetSecurityFocused.Guardrails\DotNetSecurityFocused.Guardrails.csproj" />
+    <ProjectReference Include="..\..\src\DotNetSecurityFocused\DotNetSecurityFocused.csproj" />
   </ItemGroup>
 
 </Project>

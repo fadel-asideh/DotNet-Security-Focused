@@ -1,5 +1,13 @@
 <Solution>
-  <Project Path="DotNetSecurityFocused.csproj" />
-  <Project Path="DotNetSecurityFocused.Guardrails/DotNetSecurityFocused.Guardrails.csproj" />
-  <Project Path="DotNetSecurityFocused.Tests/DotNetSecurityFocused.Tests.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/DotNetSecurityFocused.Guardrails/DotNetSecurityFocused.Guardrails.csproj" />
+    <Project Path="src/DotNetSecurityFocused/DotNetSecurityFocused.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DotNetSecurityFocused.Guardrails.Tests/DotNetSecurityFocused.Guardrails.Tests.csproj" />
+    <Project Path="tests/DotNetSecurityFocused.Tests/DotNetSecurityFocused.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/GuardrailCli/GuardrailCli.csproj" />
+  </Folder>
 </Solution>

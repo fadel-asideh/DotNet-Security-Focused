@@ -11,6 +11,7 @@ Content-Type: application/json
 {
     "email": "admin@test.com",
     "password": "Admin@123!",
+    "ConfirmPassword": "Admin@123!",
     "roles": ["Admin"]
 }
 
@@ -23,6 +24,7 @@ Content-Type: application/json
 {
     "email": "manager@test.com",
     "password": "Manager@123!",
+    "ConfirmPassword": "Manager@123!",
     "roles": ["Manager"]
 }
 
@@ -35,6 +37,20 @@ Content-Type: application/json
 {
     "email": "user@test.com",
     "password": "User@123!",
+    "ConfirmPassword": "User@123!",
+    "roles": ["User"]
+}
+
+###
+
+### Register a second regular User (needed later for the Orders IDOR check)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+    "email": "user2@test.com",
+    "password": "User2@123!",
+    "ConfirmPassword": "User2@123!",
     "roles": ["User"]
 }
 
@@ -47,6 +63,7 @@ Content-Type: application/json
 {
     "email": "adminmanager@test.com",
     "password": "AdminManager@123!",
+    "ConfirmPassword": "AdminManager@123!",
     "roles": ["Admin", "Manager"]
 }
 
@@ -59,6 +76,7 @@ Content-Type: application/json
 {
     "email": "test@test.com",
     "password": "Test@123!",
+    "ConfirmPassword": "Test@123!",
     "roles": ["SuperAdmin"]
 }
 
@@ -68,7 +86,7 @@ Content-Type: application/json
 # AUTH - Login
 # ===========================
 
-### Login as Admin (copy token → paste into @adminToken below)
+### Login as Admin (copy "token" → paste into @adminToken below)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -79,7 +97,7 @@ Content-Type: application/json
 
 ###
 
-### Login as Manager (copy token → paste into @managerToken below)
+### Login as Manager (copy "token" → paste into @managerToken below)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -90,7 +108,7 @@ Content-Type: application/json
 
 ###
 
-### Login as User (copy token → paste into @userToken below)
+### Login as User (copy "token" → paste into @userToken below, copy "refreshToken" → paste into @userRefreshToken further down)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -101,7 +119,18 @@ Content-Type: application/json
 
 ###
 
-### Login as Admin+Manager (copy token → paste into @adminManagerToken below)
+### Login as second User (copy "token" → paste into @user2Token below — needed for the Orders IDOR check)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "user2@test.com",
+    "password": "User2@123!"
+}
+
+###
+
+### Login as Admin+Manager (copy "token" → paste into @adminManagerToken below)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -113,6 +142,8 @@ Content-Type: application/json
 ###
 
 ### Login with wrong password → expect 401
+### (Task 5) Re-send this request rapidly 21+ times within 10 seconds to see the
+### sliding-window rate limiter kick in — the 21st+ attempt should return 429.
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -125,12 +156,65 @@ Content-Type: application/json
 
 # ===========================
 # Paste tokens here after login
+# Access tokens expire after 15 minutes — re-run the matching login request above if a token stops working.
 # ===========================
 
-@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWUyN2M3Yy02NTU1LTQyODQtOGJkYy02M2Y0YTY4N2I4MDciLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwianRpIjoiMGE3ZjU2M2ItNTcwMC00ZGUxLTkwYWUtMGI3MWZlMTYwMDZmIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiQWRtaW4iLCJleHAiOjE3ODMyMzU1OTIsImlzcyI6IkRvdE5ldFNlY3VyaXR5Rm9jdXNlZCIsImF1ZCI6IkRvdG5ldFNlY3VyaXR5Rm9jdXNlZFVzZXJzIn0.uqKYHuL2hcEyNxVaeBYtHF0VefcwD4uP2qpMPMCptJg
-@managerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmY2IzNGY3Ny1mNmZlLTQ5NDYtOTFmMC00YTdiODg3YjQzMTUiLCJlbWFpbCI6Im1hbmFnZXJAdGVzdC5jb20iLCJqdGkiOiJlNGY5YjJiOS1mNTVjLTRmMmItYjZiOS1hNjVkMzBkNmEzOTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJNYW5hZ2VyIiwiZXhwIjoxNzgzMjM1NzE3LCJpc3MiOiJEb3ROZXRTZWN1cml0eUZvY3VzZWQiLCJhdWQiOiJEb3RuZXRTZWN1cml0eUZvY3VzZWRVc2VycyJ9.acRa1qo5vdGBaU9jN3Vq362d2uRpTmUrj-5kmsIE0KY
-@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNzUyZTBlMi0xMDM0LTQ2NDctOTYxYi0wYjk3Nzg3NGRlOWYiLCJlbWFpbCI6InVzZXJAdGVzdC5jb20iLCJqdGkiOiJkMDJjZTY5Zi1lZDNkLTQ2MzUtOGQ0NS04YzJhNDc3YWFjMWUiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJVc2VyIiwiZXhwIjoxNzgzMjM1Njk1LCJpc3MiOiJEb3ROZXRTZWN1cml0eUZvY3VzZWQiLCJhdWQiOiJEb3RuZXRTZWN1cml0eUZvY3VzZWRVc2VycyJ9.VoLXS6h3QGNvhSCV2iNlQosgZzzt-c4nWaZtxcsE6ig
-@adminManagerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZjA4MjM0ZC02YzljLTRiYjYtOGM3ZS02NmJiNzgyZWE4YTIiLCJlbWFpbCI6ImFkbWlubWFuYWdlckB0ZXN0LmNvbSIsImp0aSI6IjU1YzMzNzJmLWZhZDAtNGM5NC1hN2EwLWZhOGUyMDIwYjQ4NSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6WyJNYW5hZ2VyIiwiQWRtaW4iXSwiZXhwIjoxNzgzMjM1NjU0LCJpc3MiOiJEb3ROZXRTZWN1cml0eUZvY3VzZWQiLCJhdWQiOiJEb3RuZXRTZWN1cml0eUZvY3VzZWRVc2VycyJ9.wXRcynl3G_W0xWSvgdx2xQrCv8z-joHneMIdzuigGPQ
+@adminToken = 
+@managerToken = 
+@userToken = 
+@user2Token = 
+@adminManagerToken = 
+@userRefreshToken = 
+# ===========================
+# AUTH - Refresh Token
+# ===========================
+
+### Refresh with a valid refresh token → expect 200 with a NEW token pair
+### Copy the new "refreshToken" from the response and replace @userRefreshToken above with it,
+### or run the next request immediately to see reuse-rejection before rotating.
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+    "refreshToken": "{{userRefreshToken}}"
+}
+
+###
+
+### Reuse the SAME refresh token again without updating @userRefreshToken → expect 401
+### (rotation revokes a refresh token the moment it's used once, so replay fails)
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+    "refreshToken": "{{userRefreshToken}}"
+}
+
+###
+
+# ===========================
+# AUTH - Logout
+# ===========================
+
+### Logout with a valid (not-yet-used) refresh token → expect 200
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+
+{
+    "refreshToken": "{{userRefreshToken}}"
+}
+
+###
+
+### Attempt to refresh again after logout, using the same token → expect 401
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+    "refreshToken": "{{userRefreshToken}}"
+}
+
+###
 
 # ===========================
 # SECRETS - No token (expect 401)
@@ -238,6 +322,63 @@ GET {{baseUrl}}/secrets/admin-and-manager
 Authorization: Bearer {{managerToken}}
 
 ###
+
+# ===========================
+# PRODUCTS - Search (parameterized query demo)
+# ===========================
+
+### Legitimate search term → expect matching products
+GET {{baseUrl}}/products/search?name=Widget
+
+###
+
+### SQL injection payload (x' OR '1'='1' -- ) → expect an EMPTY array
+### The safe search method treats this as literal text, not executable SQL —
+### compare this to ProductSearchService.SearchByNameVulnerableAsync, which is
+### never wired to a route but is covered directly by SqlInjectionTests.
+GET {{baseUrl}}/products/search?name=x%27%20OR%20%271%27%3D%271%27%20--%20
+
+###
+
+# ===========================
+# ORDERS - Ownership is always derived from the token, never the request body
+# (there is deliberately no "userId" field you can set here)
+# ===========================
+
+### Create an order as User → copy the returned "id" and paste it into @myOrderId below
+POST {{baseUrl}}/orders
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+    "productName": "Widget",
+    "quantity": 2,
+    "totalPrice": 19.98
+}
+
+###
+
+@myOrderId =
+
+### Fetch your own order → expect 200
+GET {{baseUrl}}/orders/{{myOrderId}}
+Authorization: Bearer {{userToken}}
+
+###
+
+### Fetch the SAME order as a DIFFERENT authenticated user (IDOR check) → expect 404, not someone else's data
+GET {{baseUrl}}/orders/{{myOrderId}}
+Authorization: Bearer {{user2Token}}
+
+###
+
+# ===========================
+# SECURITY HEADERS - manual check (Task 11)
+# No dedicated endpoint for this — inspect the response HEADERS on any request
+# above. Every response should carry X-Content-Type-Options, X-Frame-Options,
+# and Content-Security-Policy. Strict-Transport-Security only appears when the
+# app is called over https (not plain http on localhost).
+# ===========================
 
 # ===========================
 # Health Check

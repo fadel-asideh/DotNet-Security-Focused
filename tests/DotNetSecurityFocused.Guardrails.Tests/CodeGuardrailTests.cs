@@ -1,6 +1,6 @@
 using DotNetSecurityFocused.Guardrails;
 
-namespace DotNetSecurityFocused.Tests.Tests;
+namespace DotNetSecurityFocused.Guardrails.Tests;
 
 public class CodeGuardrailTests
 {
