@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\DotNetSecurityFocused.Guardrails\DotNetSecurityFocused.Guardrails.csproj" />
+    <ProjectReference Include="..\..\src\DotNetSecurityFocused.Guardrails\DotNetSecurityFocused.Guardrails.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

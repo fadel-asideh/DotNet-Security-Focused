@@ -7,7 +7,6 @@ using DotNetSecurityFocused.Validators;
 using DotNetSecurityFocused.Extensions;
 using DotNetSecurityFocused.Authorization;
 using Microsoft.AspNetCore.Authorization;
-using DotNetSecurityFocused.Guardrails;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,12 +23,16 @@ builder.Services.AddScoped<ProductSearchService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddSingleton<ISecurityEventLogger, SecurityEventLogger>();
-builder.Services.AddSingleton<ICodeGuardrail, CodeGuardrail>();
 
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    if (!app.Environment.IsEnvironment("Testing"))
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDBContext>();
+        await db.Database.MigrateAsync();
+    }
     await DBSeeder.SeedDataAsync(scope.ServiceProvider);
 }
 
